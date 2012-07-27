@@ -1,5 +1,4 @@
 #include "WaveMessageEmbedder.h"
-#include <iomanip>
 
 using std::setw;
 using std::right;
@@ -117,39 +116,44 @@ unsigned int WaveMessageEmbedder::getlsb(unsigned int b,unsigned int value)
 void WaveMessageEmbedder::embed(unsigned int b,unsigned int n)
 {
     // get b bits from message
-    unsigned int changeByte;
+
+    unsigned int changeSample = 0;
     unsigned int token = getNbitsFromMessage(b);
     unsigned int average_lsb = getlsb(b,averageNLeftSamples(n));
-    unsigned int num,cnt,max;
-    changeByte = 0;
+    unsigned int num,max;
+
     max = (unsigned int) pow(2,b) - 1;
 
-    bool allones;
+    //bool allones;
     //srand(time(NULL));
 
 
     while(average_lsb != token)
     {
+        while(changeSample < n)
+		{
+			cout << "Cover:" << cover[current + changeSample * n] <<  " Cover index: " << current + changeSample * n << "\n";
+			num = cover[current + changeSample * n] << (16 - b);
+			num = num >> (16 - b);
 
+			if (num == max)
+			   cover[current + changeSample * n] -= max;
+			else
+				cover[current + changeSample * n]++;
 
-        num = cover[current + changeByte * n] << (16 - b);
-        num >> (16 - b);
-
-        if (num == max)
-            cover[current + changeByte * n] - max;
-        else
-            cover[current + changeByte * n]++;
-
-
-        changeByte+=2;
-
+			average_lsb = getlsb(b,averageNLeftSamples(n));
+			if (average_lsb != token)
+				break;
+			changeSample++;
+		}
+		changeSample = 0;
         //cout<< "during averaging: average_lsb = " << average_lsb << "token = " << token <<endl ;
 
 
     }
      cout<< "\nembedded token: average_lsb = " << average_lsb << "token = " << token <<endl ;
 
-    current += 4 * n;
+    current += 2 * n;
     //unsigned int averageandgetlsbs(int d,unsigned int e,unsigned int f,unsigned int g);
     // increment or decrement average until lsb of a = b bit255,255,255,
     //increment current by n * 2
@@ -186,7 +190,7 @@ void WaveMessageEmbedder::extract(unsigned int b,unsigned int n)
     }
 
     temp.clear();
-    current += 4 *n;
+    current += 2 *n;
     currentbits += b;
 
 }
@@ -220,10 +224,10 @@ void WaveMessageEmbedder::print()
     cout << endl;
 
     cout << "Cover Bytes" << endl;
-    cout << "Left low     Left High      Right Low      Right High" <<endl;
-    for( cnt = 0 ; cnt < cByteCount; cnt++){
-        if( cnt % 4 == 2 )
-        cout << ",  ";
+    cout << "        Left                 Right       " <<endl;
+    for( cnt = 0 ; cnt < cByteCount/2; cnt++){
+        if( cnt % 2 == 1 )
+        cout << "      ";
 
         cout<<setw(10)<< right << cover[cnt] << ".." << getlsb(lsb_bits,cover[cnt]) ;
         if ( cnt % 2 == 1)
@@ -239,13 +243,13 @@ void WaveMessageEmbedder::print()
 
 int main()
 {
-    char message [] = "a";
-    BYTE cover [64];
+    char message [] = "abcd";
+    BYTE cover [256];
     srand(time(NULL));
     unsigned int i;
-    for(i = 0; i < 64; i ++)
+    for(i = 0; i < 256; i ++)
         cover[i] = rand() % 256;
-    WaveMessageEmbedder w (message,1,cover,64);
+    WaveMessageEmbedder w (message,4,cover,256);
     //cout << w.averageNLeftSamples(4)<< endl;
     //cout << w.getlsb(2,w.averageNLeftSamples(4)) << endl;
     w.print();

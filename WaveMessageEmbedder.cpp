@@ -57,7 +57,7 @@ unsigned int WaveMessageEmbedder::getNbitsFromMessage(unsigned int n)
 	
     for(i = 0; i < n ;i++)
     {
-        cout << "message.front " << message.front() << "current: " << current << endl;
+        //cout << "message.front " << message.front() << "current: " << current << endl;
         token += pow(2,n-i-1)*(unsigned int)message.front();
         message.erase(message.begin());
 
@@ -154,6 +154,8 @@ void WaveMessageEmbedder::embed(unsigned int b,unsigned int n)
 		changeSample = 0;       
     }
 	
+	first_time = true;
+	
 	// get b bits from message
 	if(message.size() > b)
 	{
@@ -177,7 +179,7 @@ void WaveMessageEmbedder::embed(unsigned int b,unsigned int n)
 			if(first_time == true)
 			{
 			   // sets all samples involved to zero
-			   cover[current + changeSample * 2] -= num;
+			   cover[current + 1 + changeSample * 2] -= num;
 			   if (changeSample == n -1)
 					first_time = false;
 			}
@@ -208,7 +210,7 @@ BYTE * WaveMessageEmbedder::getStegoData(unsigned int bitsPerSample,unsigned int
 {
     lsb_bits = bitsPerSample;
 	int remainder = cByteCount % noOfBytesToAverage;
-    while(current < cByteCount - remainder && !message.empty())
+    while(current * 2 < cByteCount - remainder && !message.empty())
         embed(bitsPerSample,noOfBytesToAverage);
     //convert cover to BYTE
     return 0;
@@ -251,7 +253,7 @@ void WaveMessageEmbedder::extract(unsigned int b,unsigned int n)
 
     temp.clear();
     current += 2 *n;
-    currentbits += 2 * b;
+    currentbits += b;
 
 }
 

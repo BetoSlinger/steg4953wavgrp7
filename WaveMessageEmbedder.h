@@ -9,10 +9,12 @@
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
+#include <iomanip>
 
 
-#include "windows.h"
-
+//#include "windows.h"
+typedef unsigned char BYTE;
+typedef unsigned long DWORD;
 
 class WaveMessageEmbedder
 {

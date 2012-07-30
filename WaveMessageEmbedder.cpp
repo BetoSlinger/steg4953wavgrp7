@@ -70,34 +70,22 @@ unsigned int WaveMessageEmbedder::averageNLeftSamples(unsigned int n)
 {
     unsigned int i;
     unsigned int sum = 0;
-    //sampleVector.clear();
     for(  i = current; i < n *2 + current ; i+=2 )
     {
-        //cout <<"in func:" << cover[i].to_ulong()  + cover[i + 1].to_ulong() * 256 << endl;
-       sum += cover[i];
-       //sampleVector.push_back(cover[i].to_ulong() + cover[i + 1].to_ulong() * 256 );
-
+        sum += cover[i];
     }
-    cout<< "current: " << current;
-
     return sum/n;
-
 }
 
 unsigned int WaveMessageEmbedder::averageNRightSamples(unsigned int n)
 {
     unsigned int i;
     unsigned int sum = 0;
-//    sampleVector.clear();
-    for(  i = current; i < n * 4 + current ; i+=4 )
+    for(  i = current + 1; i < n * 2 + current ; i+=2 )
     {
-     //  sum += cover[i + 2].to_ulong()  + cover[i + 3].to_ulong() * 256;
-       //sampleVector.push_back(cover[i + 2].to_ulong() + cover[i + 3].to_ulong() * 256 );
-
+		sum += cover[i];      
     }
-
     return sum/n;
-
 }
 
 unsigned int WaveMessageEmbedder::getlsb(unsigned int b,unsigned int value)
@@ -121,6 +109,7 @@ void WaveMessageEmbedder::embed(unsigned int b,unsigned int n)
     unsigned int changeSample = 0;
 	unsigned int token;
 	unsigned int average_lsb = getlsb(b,averageNLeftSamples(n));
+	unsigned int average_rsb = getlsb(b,averageNRightSamples(n));
     unsigned int num,max;
 	bool first_time = true;
 	// get b bits from message
@@ -137,24 +126,15 @@ void WaveMessageEmbedder::embed(unsigned int b,unsigned int n)
 
     max = (unsigned int) pow(2,b) - 1;
 
-    //bool allones;
-    //srand(time(NULL));
-	
-
     while(average_lsb != token)
     {
         while(changeSample < n)
-		{
-			cout << "Cover:" << cover[current + changeSample * 2] <<  " Cover index: " << current + changeSample * n << "\n";
-			cout << "\nAvg: " << getlsb(b,averageNLeftSamples(n)) << "Tkn:" << token << "\n";
+		{		
 			num = getlsb(b,cover[current + changeSample * 2]);
-			cout << "num: " << num << endl;
-			//num = num >> (16 - b);
-			cout << "num: " << num << endl;
+						
 			if(first_time == true)
 			{
-			
-				// sets all samples involved to zero
+			   // sets all samples involved to zero
 			   cover[current + changeSample * 2] -= num;
 			   if (changeSample == n -1)
 					first_time = false;
@@ -171,12 +151,51 @@ void WaveMessageEmbedder::embed(unsigned int b,unsigned int n)
 				break;
 			changeSample++;
 		}
-		changeSample = 0;
-        //cout<< "during averaging: average_lsb = " << average_lsb << "token = " << token <<endl ;
-
-
+		changeSample = 0;       
     }
-     cout<< "\nembedded token: average_lsb = " << average_lsb << "token = " << token <<endl ;
+	
+	// get b bits from message
+	if(message.size() > b)
+	{
+		token = getNbitsFromMessage(b);
+	}
+	else
+	{
+		int i = message.size();
+		token = getNbitsFromMessage(i);
+		token = token << (b-i);
+	}
+
+    max = (unsigned int) pow(2,b) - 1;
+
+    while(average_rsb != token)
+    {
+        while(changeSample < n)
+		{		
+			num = getlsb(b,cover[current + 1 + changeSample * 2]);
+						
+			if(first_time == true)
+			{
+			   // sets all samples involved to zero
+			   cover[current + changeSample * 2] -= num;
+			   if (changeSample == n -1)
+					first_time = false;
+			}
+			else
+			{
+				if (num == max)
+					cover[current + 1 + changeSample * 2] -= max;
+				else
+					cover[current + 1 + changeSample * 2]++;
+			}
+			average_rsb = getlsb(b,averageNRightSamples(n));
+			if (average_rsb == token)
+				break;
+			changeSample++;
+		}
+		changeSample = 0;       
+    }
+     
 
     current += 2 * n;
     //unsigned int averageandgetlsbs(int d,unsigned int e,unsigned int f,unsigned int g);
@@ -199,6 +218,7 @@ void WaveMessageEmbedder::extract(unsigned int b,unsigned int n)
 {
 
     unsigned int average_lsb = getlsb(b,averageNLeftSamples(n));
+	unsigned int average_rsb = getlsb(b,averageNRightSamples(n));
     std::vector<unsigned int> temp;
     cout<< "\non extraction: average_lsb = " << average_lsb << "current = " << current <<endl ;
     unsigned int i;
@@ -210,6 +230,20 @@ void WaveMessageEmbedder::extract(unsigned int b,unsigned int n)
        // cout<<(bool)temp[i];
 
     }
+	 for( i = 0; i < temp.size(); i++)
+    {
+        message.push_back((bool)temp[i]);
+    }
+	temp.clear();
+    	
+	for(i = currentbits ; i < currentbits + b; i ++)
+    {
+
+        temp.insert(temp.begin(),average_rsb%2);
+        average_rsb = average_rsb >> 1;
+       // cout<<(bool)temp[i];
+
+    }
     for( i = 0; i < temp.size(); i++)
     {
         message.push_back((bool)temp[i]);
@@ -217,7 +251,7 @@ void WaveMessageEmbedder::extract(unsigned int b,unsigned int n)
 
     temp.clear();
     current += 2 *n;
-    currentbits += b;
+    currentbits += 2 * b;
 
 }
 
